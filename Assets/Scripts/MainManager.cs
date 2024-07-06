@@ -1,8 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 public class MainManager : MonoBehaviour
 {
@@ -11,6 +13,7 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text HighScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -22,6 +25,9 @@ public class MainManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        ScoreText.text = $"{Globals.Instance.playerName}'s score: {m_Points}";
+        HighScoreText.text = $"High Score || {Globals.Instance.highScorePlayerName}: {Globals.Instance.highScore}";
+
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -45,7 +51,7 @@ public class MainManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 m_Started = true;
-                float randomDirection = Random.Range(-1.0f, 1.0f);
+                float randomDirection = UnityEngine.Random.Range(-1.0f, 1.0f);
                 Vector3 forceDir = new Vector3(randomDirection, 1, 0);
                 forceDir.Normalize();
 
@@ -65,11 +71,41 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = $"{Globals.Instance.playerName}'s score: {m_Points}";
+    }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public int highScore;
+        public string highScorePlayerName;
     }
 
     public void GameOver()
     {
+        if (m_Points > Globals.Instance.highScore)
+        {
+            Globals.Instance.highScore = m_Points;
+            Globals.Instance.highScorePlayerName = Globals.Instance.playerName;
+        
+            SaveData data = new SaveData();
+            data.highScore = Globals.Instance.highScore;
+            data.highScorePlayerName = Globals.Instance.highScorePlayerName;
+
+            string json = JsonUtility.ToJson(data);
+
+            Debug.Log("Attempting to save");
+            try
+            {
+                File.WriteAllText(Application.persistentDataPath + "/highscoresave.json", json);
+                Debug.Log("Save successful");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to save high score: {ex.Message}");
+            }
+        }
+
         m_GameOver = true;
         GameOverText.SetActive(true);
     }
